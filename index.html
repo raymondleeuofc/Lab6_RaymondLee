@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html
+	PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<!-- Leaflet -->
+
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+		integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+		integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="	crossorigin=""></script>
+
+    <!-- Turf -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+
+    <style>
+        #map { height: 700px; }
+        </style>
+    <title>Polyline Simplification</title>
+</head>
+<body>
+    Please click on the map to draw a polyline... then
+    <input type="button" id="reset-button" name="reset" value="Reset" onclick="clearPolyline()">
+    <input type="button" id="simplify" name="simplify" value="Simplify" onclick="simplifyPolyline()">
+
+    <div id="map"></div>
+
+    <script>
+        const map = L.map('map').setView([51.0447, -114.0719], 12); // Calgary coord.
+
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        var points = [];
+        var polyline;
+        var polylineSimplified;
+
+        map.on('click', function (event) {
+            points.push(event.latlng);
+            if (polyline) {
+                polyline.setLatLngs(points);
+            } else {
+                polyline = L.polyline(points, { color: 'blue' }).addTo(map);
+            }
+        });
+
+        function clearPolyline() {
+            if (polyline) {
+                points = [];
+                map.removeLayer(polyline);
+                polyline = null;
+            }
+            if (polylineSimplified) {
+                map.removeLayer(polylineSimplified);
+                polylineSimplified = null;
+            }
+        }
+
+        function simplifyPolyline() {
+            if (!polyline || points.length < 3) {
+                alert('need at least 3 points to simplify!');
+                return;
+            }
+
+            const geojson = {
+                "type": "Feature",
+                "geometry": {
+                    "type": "LineString",
+                    "coordinates": points.map(x => [x.lng, x.lat])
+                }
+            };
+
+            var simplified = turf.simplify(geojson, {
+                tolerance: 0.01, 
+                highQuality: false
+            });
+
+            if (polylineSimplified) {
+                map.removeLayer(polylineSimplified);
+                polylineSimplified = null;
+            }
+            polylineSimplified = L.geoJSON(simplified, { color: 'red' }).addTo(map);
+        }
+
+    </script>
+
+
+</body>
+</html>
